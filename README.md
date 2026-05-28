@@ -65,6 +65,21 @@ GLFW packages:
     cmake --build build-modern
     ./build-modern/Instant\ Meshes
 
+To install it like a normal desktop application on CachyOS, build and then run:
+
+    cmake --install build-modern --prefix ~/.local
+
+This installs:
+
+    ~/.local/bin/instant-meshes
+    ~/.local/libexec/instant-meshes/Instant\ Meshes
+    ~/.local/share/applications/instant-meshes.desktop
+    ~/.local/share/icons/hicolor/256x256/apps/instant-meshes.png
+
+After that, either start it from the application launcher/menu or run:
+
+    ~/.local/bin/instant-meshes
+
 ``yad`` is preferred for the Linux file dialog on modern KDE/Wayland sessions;
 ``zenity`` is still supported as a fallback.
 

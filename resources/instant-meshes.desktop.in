@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Instant Meshes
+Comment=Interactive field-aligned mesh generation
+Exec=instant-meshes %F
+Icon=instant-meshes
+Terminal=false
+Categories=Graphics;3DGraphics;
+Keywords=mesh;retopology;geometry;quad;tri;
+StartupNotify=true

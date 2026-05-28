@@ -1,11 +1,29 @@
 cmake_minimum_required(VERSION 3.25)
 project(InstantMeshes LANGUAGES C CXX)
 
+include(GNUInstallDirs)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(INSTANT_MESHES_DEV_MODE "Instant meshes developer mode" OFF)
+
+if(UNIX AND NOT APPLE)
+  file(RELATIVE_PATH INSTANT_MESHES_LIBEXEC_RELATIVE
+    "/${CMAKE_INSTALL_BINDIR}"
+    "/${CMAKE_INSTALL_LIBEXECDIR}/instant-meshes")
+
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/instant-meshes-launcher.sh.in
+    ${CMAKE_CURRENT_BINARY_DIR}/instant-meshes
+    @ONLY)
+
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/instant-meshes.desktop.in
+    ${CMAKE_CURRENT_BINARY_DIR}/instant-meshes.desktop
+    @ONLY)
+endif()
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to 'Release' as none was specified.")
@@ -189,4 +207,19 @@ endif()
 
 if (UNIX AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
   add_custom_command(TARGET InstantMeshes POST_BUILD COMMAND strip $<TARGET_FILE:InstantMeshes>)
+endif()
+
+if(UNIX AND NOT APPLE)
+  install(TARGETS InstantMeshes
+    RUNTIME DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/instant-meshes)
+
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/instant-meshes
+    DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/instant-meshes.desktop
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)
+
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.png
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/256x256/apps
+    RENAME instant-meshes.png)
 endif()

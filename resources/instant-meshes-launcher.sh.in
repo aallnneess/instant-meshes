@@ -1,0 +1,6 @@
+#!/bin/sh
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+APP_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/@INSTANT_MESHES_LIBEXEC_RELATIVE@" && pwd)
+
+exec "$APP_DIR/Instant Meshes" "$@"
