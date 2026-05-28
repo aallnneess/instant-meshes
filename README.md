@@ -56,6 +56,18 @@ To build on Linux, please install the prerequisites ``libxrandr-dev``,
 ``libxinerama-dev``, ``libxcursor-dev``, and ``libxi-dev`` and then use the
 same sequence of commands shown above for MacOS.
 
+On current Arch/CachyOS-style Linux systems, use the system Eigen, oneTBB, and
+GLFW packages:
+
+    sudo pacman -S --needed cmake ninja gcc eigen onetbb glfw libxrandr libxinerama libxcursor libxi libglvnd mesa glu yad
+    git submodule update --init --recursive
+    cmake -S . -B build-modern -G Ninja -DCMAKE_BUILD_TYPE=Release
+    cmake --build build-modern
+    ./build-modern/Instant\ Meshes
+
+``yad`` is preferred for the Linux file dialog on modern KDE/Wayland sessions;
+``zenity`` is still supported as a fallback.
+
 On Windows, open the generated file ``InstantMeshes.sln`` after step 3 and proceed building as usual from within Visual Studio.
 
 ## Usage

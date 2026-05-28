@@ -170,7 +170,11 @@ int main(int argc, char **argv) {
     if (args.size() == 0)
         cout << "Running in GUI mode, start with -h for instructions on batch mode." << endl;
 
-    tbb::task_scheduler_init init(nprocs == -1 ? tbb::task_scheduler_init::automatic : nprocs);
+    std::unique_ptr<oneapi::tbb::global_control> tbbLimit;
+    if (nprocs > 0) {
+        tbbLimit.reset(new oneapi::tbb::global_control(
+            oneapi::tbb::global_control::max_allowed_parallelism, nprocs));
+    }
 
     if (!batchOutput.empty() && args.size() == 1) {
         try {

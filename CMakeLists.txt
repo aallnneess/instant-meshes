@@ -1,5 +1,9 @@
-cmake_minimum_required (VERSION 2.8.3)
-project(InstantMeshes)
+cmake_minimum_required(VERSION 3.25)
+project(InstantMeshes LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(INSTANT_MESHES_DEV_MODE "Instant meshes developer mode" OFF)
 
@@ -11,11 +15,15 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 string(TOUPPER "${CMAKE_BUILD_TYPE}" U_CMAKE_BUILD_TYPE)
 
-if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ext/nanogui/ext/glfw")
+if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ext/nanogui")
   message(FATAL_ERROR "The Instant Meshes dependency repositories (NanoGUI, GLFW, etc.) are missing! "
     "You probably did not clone the project with --recursive. It is possible to recover "
     "by calling \"git submodule update --init --recursive\"")
 endif()
+
+find_package(Eigen3 CONFIG REQUIRED)
+find_package(TBB CONFIG REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
 
 # Enable folders for projects in Visual Studio
 if (CMAKE_GENERATOR MATCHES "Visual Studio")
@@ -54,29 +62,15 @@ elseif(APPLE)
   #string(REGEX REPLACE "^.*X([0-9.]*).sdk$" "\\1" CMAKE_OSX_DEPLOYMENT_TARGET "${CMAKE_OSX_SYSROOT}")
 endif()
 
-# Enable C++11 mode on GCC / Clang
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-endif()
-
 # Build NanoGUI
 set(NANOGUI_BUILD_EXAMPLE OFF CACHE BOOL " " FORCE)
 set(NANOGUI_BUILD_SHARED  OFF CACHE BOOL " " FORCE)
 set(NANOGUI_BUILD_PYTHON  OFF CACHE BOOL " " FORCE)
+set(NANOGUI_INSTALL       OFF CACHE BOOL " " FORCE)
+set(NANOGUI_USE_SYSTEM_GLFW ON CACHE BOOL " " FORCE)
+set(NANOGUI_EIGEN_INCLUDE_DIR "/usr/include/eigen3" CACHE PATH " " FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ext/nanogui ext_build/nanogui)
-set_property(TARGET nanogui glfw glfw_objects bin2c PROPERTY FOLDER "dependencies")
-
-# Build TBB
-set(TBB_BUILD_STATIC ON CACHE BOOL " " FORCE)
-set(TBB_BUILD_SHARED OFF CACHE BOOL " " FORCE)
-set(TBB_BUILD_TBBMALLOC OFF CACHE BOOL " " FORCE)
-set(TBB_BUILD_TBBMALLOC_PROXY OFF CACHE BOOL " " FORCE)
-set(TBB_BUILD_TESTS OFF CACHE BOOL " " FORCE)
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ext/tbb ext_build/tbb)
-set_property(TARGET tbb_static tbb_def_files PROPERTY FOLDER "dependencies")
+set_property(TARGET nanogui bin2c PROPERTY FOLDER "dependencies")
 
 # Compile instant meshes with various compiler warnings turned on
 if(MSVC)
@@ -98,8 +92,6 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/ext/nanogui/include
   # NanoGUI dependencies (Eigen, GLFW, NanoVG, GLAD?)
   ${NANOGUI_EXTRA_INCS}
-  # Intel Thread Building Blocks
-  ${CMAKE_CURRENT_SOURCE_DIR}/ext/tbb/include
   # Disjoint set data structure
   ${CMAKE_CURRENT_SOURCE_DIR}/ext/dset
   # Parallel stable sort
@@ -130,10 +122,10 @@ set(IM_RESOURCES ${PNG_FILES} ${FRAG_FILES} ${VERT_FILES} ${GEO_FILES})
 
 add_custom_command(
   OUTPUT resources.cpp
-  COMMAND bin2c ARGS resources.cpp resources.h ${IM_RESOURCES}
+  COMMAND $<TARGET_FILE:bin2c> ARGS resources.cpp resources.h ${IM_RESOURCES}
   DEPENDS bin2c ${IM_RESOURCES}
   COMMENT "Running bin2c"
-  PRE_BUILD VERBATIM)
+  VERBATIM)
 
 if (INSTANT_MESHES_DEV_MODE)
   add_definitions(-DDEV_MODE)
@@ -173,7 +165,7 @@ add_executable(InstantMeshes MACOSX_BUNDLE
   ${EXTRA_SOURCE})
 
 add_definitions(${NANOGUI_EXTRA_DEFS})
-target_link_libraries(InstantMeshes tbb_static nanogui ${NANOGUI_EXTRA_LIBS})
+target_link_libraries(InstantMeshes PRIVATE TBB::tbb Eigen3::Eigen nanogui ${NANOGUI_EXTRA_LIBS})
 
 set_target_properties(InstantMeshes PROPERTIES OUTPUT_NAME "Instant Meshes")
 

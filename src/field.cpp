@@ -1539,8 +1539,6 @@ extern int nprocs;
 void Optimizer::run() {
     const int levelIterations = 6;
     uint32_t operations = 0;
-    tbb::task_scheduler_init init(nprocs);
-
     auto progress = [&](uint32_t ops) {
         operations += ops;
         if (mHierarchical)

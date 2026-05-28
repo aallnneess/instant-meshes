@@ -13,6 +13,8 @@
 
 #include "bvh.h"
 
+#include <oneapi/tbb/parallel_invoke.h>
+
 struct Bins {
     static const int BIN_COUNT = 8;
     Bins() { memset(counts, 0, sizeof(uint32_t) * BIN_COUNT); }
@@ -20,7 +22,7 @@ struct Bins {
     AABB bounds[BIN_COUNT];
 };
 
-struct BVHBuildTask : public tbb::task {
+struct BVHBuildTask {
     enum { SERIAL_THRESHOLD = 32 };
     BVH &bvh;
     uint32_t node_idx;
@@ -29,7 +31,11 @@ struct BVHBuildTask : public tbb::task {
     BVHBuildTask(BVH &bvh, uint32_t node_idx, uint32_t *start, uint32_t *end, uint32_t *temp)
         : bvh(bvh), node_idx(node_idx), start(start), end(end), temp(temp) { }
 
-    task *execute() {
+    void operator()() const {
+        execute(bvh, node_idx, start, end, temp);
+    }
+
+    static void execute(BVH &bvh, uint32_t node_idx, uint32_t *start, uint32_t *end, uint32_t *temp) {
         const MatrixXu &F = *bvh.mF;
         const MatrixXf &V = *bvh.mV;
         bool pointcloud = F.size() == 0;
@@ -41,7 +47,7 @@ struct BVHBuildTask : public tbb::task {
             const ProgressCallback &progress = bvh.mProgress;
             SHOW_PROGRESS_RANGE(range, total_size, "Constructing Bounding Volume Hierarchy");
             execute_serially(bvh, node_idx, start, end, temp);
-            return nullptr;
+            return;
         }
 
         int axis = node.aabb.largestAxis();
@@ -114,7 +120,7 @@ struct BVHBuildTask : public tbb::task {
             /* Could not find a good split plane -- retry with
                more careful serial code just to be sure.. */
             execute_serially(bvh, node_idx, start, end, temp);
-            return nullptr;
+                return;
         }
 
         uint32_t left_count = bins.counts[best_index];
@@ -159,22 +165,10 @@ struct BVHBuildTask : public tbb::task {
         memcpy(start, temp, size * sizeof(uint32_t));
         assert(offset_left == left_count && offset_right == size);
 
-        /* Create an empty parent task */
-        tbb::task& c = *new (allocate_continuation()) tbb::empty_task;
-        c.set_ref_count(2);
-
-        /* Post right subtree to scheduler */
-        BVHBuildTask &b = *new (c.allocate_child())
-            BVHBuildTask(bvh, node_idx_right, start + left_count,
-                         end, temp + left_count);
-        spawn(b);
-
-        /* Directly start working on left subtree */
-        recycle_as_child_of(c);
-        node_idx = node_idx_left;
-        end = start + left_count;
-
-        return this;
+        oneapi::tbb::parallel_invoke(
+            [&]() { execute(bvh, node_idx_left, start, start + left_count, temp); },
+            [&]() { execute(bvh, node_idx_right, start + left_count, end, temp + left_count); }
+        );
     }
 
     static void execute_serially(BVH &bvh, uint32_t node_idx, uint32_t *start, uint32_t *end, uint32_t *temp) {
@@ -312,9 +306,7 @@ void BVH::build(const ProgressCallback &progress) {
 
     Timer<> timer;
     uint32_t *temp = new uint32_t[total_size];
-    BVHBuildTask& task = *new(tbb::task::allocate_root())
-        BVHBuildTask(*this, 0u, mIndices, mIndices + total_size, temp);
-    tbb::task::spawn_root_and_wait(task);
+    BVHBuildTask(*this, 0u, mIndices, mIndices + total_size, temp)();
     delete[] temp;
 
     std::pair<Float, uint32_t> stats = statistics();

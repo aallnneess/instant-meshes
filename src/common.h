@@ -26,10 +26,13 @@
 #include <vector>
 #include <atomic>
 #include <tbb/tbb.h>
+#include <oneapi/tbb/global_control.h>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <algorithm>
+#include <cassert>
+#include <memory>
 
 #define PARALLELIZE
 #define SINGLE_PRECISION

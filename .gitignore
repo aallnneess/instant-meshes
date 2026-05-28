@@ -3,6 +3,7 @@ Makefile
 .DS_Store
 ext_build
 build
+build-modern
 Release
 Debug
 CMakeCache.txt
